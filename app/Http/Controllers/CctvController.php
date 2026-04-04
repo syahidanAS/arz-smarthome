@@ -8,7 +8,7 @@ class CctvController extends Controller
 {
     private function getLatestVideo()
     {
-        $base = env('CCTV_VIDEO_PATH', '/Volumes/cctv/xiaomi_camera_videos/78DF724AC8BB');
+        $base = config('cctv.storage_path');
 
         $folders = array_filter(glob($base . '/*'), 'is_dir');
         rsort($folders);
@@ -36,7 +36,7 @@ class CctvController extends Controller
 
     public function list()
     {
-       $base = env('CCTV_VIDEO_PATH', '/Volumes/cctv/xiaomi_camera_videos/78DF724AC8BB');
+       $base = config('cctv.storage_path');
 
         $folders = array_filter(glob($base . '/*'), 'is_dir');
         rsort($folders);
