@@ -25,7 +25,7 @@ class WelcomeController extends Controller
         $action = $request->input('action');
 
         // Endpoint API eksternal
-        $url = "http://192.168.88.13:5000/relay/{$relay}/{$action}";
+        $url = "http://100.119.33.113:5000/relay/{$relay}/{$action}";
 
         try {
             // Request POST ke API eksternal
