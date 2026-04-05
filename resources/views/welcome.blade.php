@@ -84,6 +84,26 @@
                         <div id="humidity-bar" class="bg-white h-2 rounded-full" style="width: 0%"></div>
                     </div>
                 </div>
+
+                <div class="bg-gradient-to-br from-purple-600 to-indigo-800 rounded-2xl p-6 shadow-lg">
+                    <div class="flex justify-between">
+                        <h3>Air Pressure</h3><span class="text-purple-200 text-sm">BMP180</span>
+                    </div>
+                    <div class="mt-6 text-5xl font-bold">
+                        <p id="pressure">--</p>
+                    </div>
+                    <p id="pressure-status" class="text-purple-200 mt-2">--</p>
+                </div>
+
+                <div class="bg-gradient-to-br from-pink-600 to-red-600 rounded-2xl p-6 shadow-lg">
+                    <div class="flex justify-between">
+                        <h3>BMP Temp</h3><span class="text-pink-200 text-sm">BMP180</span>
+                    </div>
+                    <div class="mt-6 text-5xl font-bold">
+                        <p id="bmp-temp">--</p>
+                    </div>
+                    <p id="bmp-temp-status" class="text-pink-200 mt-2">--</p>
+                </div>
             </div>
 
             <!-- CCTV -->
@@ -148,6 +168,11 @@
         const humBarEl = document.getElementById('humidity-bar');
         const tempStatusEl = document.getElementById('temperature-status');
         const humStatusEl = document.getElementById('humidity-status');
+        const pressureEl = document.getElementById('pressure');
+        const pressureStatusEl = document.getElementById('pressure-status');
+
+        const bmpTempEl = document.getElementById('bmp-temp');
+        const bmpTempStatusEl = document.getElementById('bmp-temp-status');
 
         let ws = null;
         function connectWS() {
@@ -163,6 +188,23 @@
                     humBarEl.style.width = Math.min(d.humidity, 100) + '%';
                     tempStatusEl.innerText = d.temperature < 20 ? 'Cold' : d.temperature <= 30 ? 'Comfortable' : 'Hot';
                     humStatusEl.innerText = d.humidity < 30 ? 'Dry' : d.humidity <= 60 ? 'Normal' : 'Humid';
+                    pressureEl.innerText = `${d.pressure.toFixed(2)} hPa`;
+                    bmpTempEl.innerText = `${d.bmp_temperature.toFixed(1)}°C`;
+
+                    // Pressure status
+                    if (d.pressure < 1000) {
+                        pressureStatusEl.innerText = "Low (Rainy)";
+                    } else if (d.pressure <= 1013) {
+                        pressureStatusEl.innerText = "Normal";
+                    } else {
+                        pressureStatusEl.innerText = "High (Clear)";
+                    }
+
+                    // BMP Temp status
+                    bmpTempStatusEl.innerText =
+                        d.bmp_temperature < 20 ? 'Cold' :
+                            d.bmp_temperature <= 30 ? 'Comfortable' :
+                                'Hot';
                 } catch (err) { console.error(err); }
             };
             ws.onerror = console.error;
