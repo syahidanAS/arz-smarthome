@@ -143,7 +143,7 @@
                             <input type="checkbox" class="sr-only peer lamp-switch" data-relay="{{ $s['relay'] }}">
                             <div class="w-12 h-7 bg-gray-700 rounded-full peer-checked:bg-{{ $s['color'] }}-500"></div>
                             <div
-                                class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition peer-checked:translate-x-5">
+                                class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition peer-checked:translate-x-5 pointer-events-none">
                             </div>
                         </label>
                     </div>

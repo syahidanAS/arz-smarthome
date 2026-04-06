@@ -33,6 +33,8 @@ class WelcomeController extends Controller
                 'Authorization' => "Bearer " . env('API_TOKEN')
             ])->post($url);
 
+            return $response->json();
+
             // Cek status
             if ($response->successful()) {
                 return response()->json([
