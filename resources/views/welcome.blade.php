@@ -131,7 +131,7 @@
                     $switches = [
                         ['label' => 'Living Room', 'desc' => 'Living Room Lamp', 'relay' => '4', 'color' => 'green'],
                         ['label' => 'Terace', 'desc' => 'Terace Lamp', 'relay' => '3', 'color' => 'yellow'],
-                        ['label' => 'Comfort Mode', 'desc' => 'Activate / Deactivate Comfort Mode', 'relay' => 'comfort', 'color' => 'blue'],
+                        ['label' => 'Bedroom', 'desc' => 'Bedroom Lamp', 'relay' => '2', 'color' => 'blue'],
                     ];
                 @endphp
                 @foreach($switches as $s)
@@ -158,6 +158,36 @@
         <button onclick="closeModal()" class="absolute top-5 right-5 text-white text-3xl">✕</button>
         <video id="modalPlayer" class="w-full h-full object-contain" autoplay muted controls></video>
     </div>
+
+    <script>
+
+
+        Echo.channel('smarthome')
+            .listen('.sensor.updated', (e) => {
+                const d = e.data;
+
+                temperatureEl.innerText = `${d.temperature.toFixed(1)}°C`;
+                humidityEl.innerText = `${d.humidity.toFixed(1)}%`;
+
+                tempBarEl.style.width = Math.min((d.temperature / 50) * 100, 100) + '%';
+                humBarEl.style.width = Math.min(d.humidity, 100) + '%';
+
+                tempStatusEl.innerText =
+                    d.temperature < 20 ? 'Cold' :
+                        d.temperature <= 30 ? 'Comfortable' : 'Hot';
+
+                humStatusEl.innerText =
+                    d.humidity < 30 ? 'Dry' :
+                        d.humidity <= 60 ? 'Normal' : 'Humid';
+
+                pressureEl.innerText = `${d.pressure.toFixed(2)} hPa`;
+                bmpTempEl.innerText = `${d.bmp_temperature.toFixed(1)}°C`;
+            });
+
+
+
+
+    </script>
 
     <script>
         // =================== WEBSOCKET ===================
@@ -218,19 +248,6 @@
                 const isChecked = e.target.checked;
                 const relay = e.target.dataset.relay;
                 let reqs = [];
-
-                if (relay === 'comfort') {
-                    // ON → Activate Comfort, OFF → Deactivate Comfort
-                    if (isChecked) {
-                        reqs.push({ relay: 2, action: 'on' });
-                        reqs.push({ relay: 4, action: 'off' });
-                    } else {
-                        reqs.push({ relay: 2, action: 'off' });
-                        reqs.push({ relay: 4, action: 'on' });
-                    }
-                } else if (relay) {
-                    reqs.push({ relay, action: isChecked ? 'on' : 'off' });
-                }
 
                 try {
                     const results = await Promise.all(reqs.map(r =>
