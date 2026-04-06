@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'raspi' => [
+        'url' => env('RASPI_IP'),
+        'token' => env('RASPI_TOKEN'),
+    ],
+
 ];
