@@ -7,6 +7,7 @@
     <title>{{ config('app.name', 'SmartHome Panel') }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @vite('resources/css/app.css')
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 
 <body class="bg-gray-950 text-white">
@@ -123,27 +124,40 @@
         </div>
 
         <!-- SWITCH -->
-        <!-- SWITCH -->
         <div>
             <h2 class="text-xl mb-4 text-gray-300">Control Devices</h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
                 @php
                     $switches = [
-                        ['label' => 'Living Room', 'desc' => 'Living Room Lamp', 'relay' => '4', 'color' => 'green'],
-                        ['label' => 'Terace', 'desc' => 'Terace Lamp', 'relay' => '3', 'color' => 'yellow'],
-                        ['label' => 'Bedroom', 'desc' => 'Bedroom Lamp', 'relay' => '2', 'color' => 'blue'],
+                        ['label' => 'Living Room', 'desc' => 'Living Room Lamp', 'relay' => '2', 'color' => 'green'],
+                        ['label' => 'Bedroom', 'desc' => 'Bedroom Lamp', 'relay' => '3', 'color' => 'blue'],
+                        ['label' => 'Terace', 'desc' => 'Terace Lamp', 'relay' => '4', 'color' => 'yellow']
                     ];
                 @endphp
+
                 @foreach($switches as $s)
-                    <div
-                        class="bg-gray-900 p-5 rounded-2xl border border-gray-800 hover:border-{{ $s['color'] }}-500 transition">
+                    <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800">
                         <h3>{{ $s['label'] }}</h3>
                         <p class="text-gray-500 text-sm mb-4">{{ $s['desc'] }}</p>
+
                         <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" class="sr-only peer lamp-switch" data-relay="{{ $s['relay'] }}">
-                            <div class="w-12 h-7 bg-gray-700 rounded-full peer-checked:bg-{{ $s['color'] }}-500"></div>
+                               <input type="checkbox"
+                                class="sr-only peer lamp-switch"
+                                data-relay="{{ $s['relay'] }}"
+                                {{ ($relays[$s['relay']] ?? 'off') == 'on' ? 'checked' : '' }}>
+
+                            <!-- Track -->
+                            <div class="w-12 h-7 bg-gray-700 rounded-full
+                                        peer-checked:bg-green-500
+                                        transition-colors"></div>
+
+                            <!-- Knob -->
+                            <div class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full
+                                        transition-transform
+                                        peer-checked:translate-x-5"></div>
+
                             <div
-                                class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition peer-checked:translate-x-5 pointer-events-none">
+                                class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition peer-checked:translate-x-5">
                             </div>
                         </label>
                     </div>
@@ -160,114 +174,6 @@
     </div>
 
     <script>
-
-
-        Echo.channel('smarthome')
-            .listen('.sensor.updated', (e) => {
-                const d = e.data;
-
-                temperatureEl.innerText = `${d.temperature.toFixed(1)}°C`;
-                humidityEl.innerText = `${d.humidity.toFixed(1)}%`;
-
-                tempBarEl.style.width = Math.min((d.temperature / 50) * 100, 100) + '%';
-                humBarEl.style.width = Math.min(d.humidity, 100) + '%';
-
-                tempStatusEl.innerText =
-                    d.temperature < 20 ? 'Cold' :
-                        d.temperature <= 30 ? 'Comfortable' : 'Hot';
-
-                humStatusEl.innerText =
-                    d.humidity < 30 ? 'Dry' :
-                        d.humidity <= 60 ? 'Normal' : 'Humid';
-
-                pressureEl.innerText = `${d.pressure.toFixed(2)} hPa`;
-                bmpTempEl.innerText = `${d.bmp_temperature.toFixed(1)}°C`;
-            });
-
-
-
-
-    </script>
-
-    <script>
-        // =================== WEBSOCKET ===================
-        const wsUrl = "{{ $ws_ip }}";
-        const temperatureEl = document.getElementById('temperature');
-        const humidityEl = document.getElementById('humidity');
-        const tempBarEl = document.getElementById('temperature-bar');
-        const humBarEl = document.getElementById('humidity-bar');
-        const tempStatusEl = document.getElementById('temperature-status');
-        const humStatusEl = document.getElementById('humidity-status');
-        const pressureEl = document.getElementById('pressure');
-        const pressureStatusEl = document.getElementById('pressure-status');
-
-        const bmpTempEl = document.getElementById('bmp-temp');
-        const bmpTempStatusEl = document.getElementById('bmp-temp-status');
-
-        let ws = null;
-        function connectWS() {
-            if (ws && ws.readyState === WebSocket.OPEN) return;
-            ws = new WebSocket(wsUrl);
-            ws.onopen = () => console.log('WS connected');
-            ws.onmessage = e => {
-                try {
-                    const d = JSON.parse(e.data);
-                    temperatureEl.innerText = `${d.temperature.toFixed(1)}°C`;
-                    humidityEl.innerText = `${d.humidity.toFixed(1)}%`;
-                    tempBarEl.style.width = Math.min((d.temperature / 50) * 100, 100) + '%';
-                    humBarEl.style.width = Math.min(d.humidity, 100) + '%';
-                    tempStatusEl.innerText = d.temperature < 20 ? 'Cold' : d.temperature <= 30 ? 'Comfortable' : 'Hot';
-                    humStatusEl.innerText = d.humidity < 30 ? 'Dry' : d.humidity <= 60 ? 'Normal' : 'Humid';
-                    pressureEl.innerText = `${d.pressure.toFixed(2)} hPa`;
-                    bmpTempEl.innerText = `${d.bmp_temperature.toFixed(1)}°C`;
-
-                    // Pressure status
-                    if (d.pressure < 1000) {
-                        pressureStatusEl.innerText = "Low (Rainy)";
-                    } else if (d.pressure <= 1013) {
-                        pressureStatusEl.innerText = "Normal";
-                    } else {
-                        pressureStatusEl.innerText = "High (Clear)";
-                    }
-
-                    // BMP Temp status
-                    bmpTempStatusEl.innerText =
-                        d.bmp_temperature < 20 ? 'Cold' :
-                            d.bmp_temperature <= 30 ? 'Comfortable' :
-                                'Hot';
-                } catch (err) { console.error(err); }
-            };
-            ws.onerror = console.error;
-            ws.onclose = () => { console.log('Reconnect WS 3s'); setTimeout(connectWS, 3000); }
-        }
-        connectWS();
-
-        // =================== LAMP SWITCH ===================
-        document.querySelectorAll('.lamp-switch').forEach(cb => {
-            cb.addEventListener('change', async e => {
-                const isChecked = e.target.checked;
-                const relay = e.target.dataset.relay;
-                let reqs = [];
-
-                try {
-                    const results = await Promise.all(reqs.map(r =>
-                        fetch('{{ route("switch-action") }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                            },
-                            body: JSON.stringify(r)
-                        }).then(res => res.json())
-                    ));
-                    if (!results.every(r => r.status === 'success')) throw new Error('Some request failed');
-                } catch (err) {
-                    console.error(err);
-                    e.target.checked = !isChecked; // rollback switch
-                }
-            });
-        });
-
         // =================== CCTV ===================
         const video = document.getElementById('player');
         const modal = document.getElementById('cctvModal');
@@ -302,64 +208,62 @@
     </script>
 
     <script>
-        // Ambil semua switchsmart
-        const lampSwitches = document.querySelectorAll('.lamp-switch');
+         async function fetchSensorData() {
+        try {
+            const res = await fetch('/sensors');
+            if (!res.ok) throw new Error('Failed to fetch sensor data');
+            const data = await res.json();
 
-        // Load state dari localStorage saat halaman dibuka
-        lampSwitches.forEach(cb => {
-            const relay = cb.dataset.relay;
-            const saved = localStorage.getItem(`switch-${relay}`);
-            if (saved !== null) cb.checked = saved === 'true';
-        });
+            // Update DOM
+            document.getElementById('temperature').textContent = data.temperature ?? '--';
+            document.getElementById('humidity').textContent = data.humidity ?? '--';
+            document.getElementById('pressure').textContent = data.pressure ?? '--';
+            document.getElementById('bmp-temp').textContent = data.bmp_temp ?? '--';
 
-        lampSwitches.forEach(cb => {
-            cb.addEventListener('change', async e => {
-                const isChecked = e.target.checked;
-                const relay = e.target.dataset.relay;
-                let reqs = [];
+            // Optional: update bar width (0-100%) misal
+            if (data.temperature) document.getElementById('temperature-bar').style.width = Math.min(data.temperature, 100) + '%';
+            if (data.humidity) document.getElementById('humidity-bar').style.width = Math.min(data.humidity, 100) + '%';
 
-                // Comfort mode logic
-                if (relay === 'comfort') {
-                    if (isChecked) {
-                        reqs.push({ relay: 2, action: 'on' });
-                        reqs.push({ relay: 4, action: 'off' }); // Living Room off
-                    } else {
-                        reqs.push({ relay: 2, action: 'off' });
-                        reqs.push({ relay: 4, action: 'on' }); // Living Room on kembali
+        } catch(err) {
+            console.error(err);
+        }
+    }
+
+    // Fetch data pertama kali
+    fetchSensorData();
+
+    // Polling tiap 3 detik
+    setInterval(fetchSensorData, 3000);
+    </script>
+
+    <script>
+        $(document).ready(function () {
+            const url = '{{ env("APP_ENV") }}' === 'local' ? 'http://localhost:8000/switch-action' : "{{ route('switch-action') }}";
+            const token = $('meta[name="csrf-token"]').attr('content');
+
+            $('.lamp-switch').on('change', function () {
+                let el = $(this);
+                let relay = el.data('relay');
+                let isChecked = el.is(':checked');
+
+                $.ajax({
+                    url: url,
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({
+                        relay: relay,
+                        action: isChecked ? 'on' : 'off'
+                    }),
+                    headers: {
+                        'X-CSRF-TOKEN': token
+                    },
+                    success: function () {
+                        localStorage.setItem('switch-' + relay, isChecked);
+                    },
+                    error: function () {
+                        el.prop('checked', !isChecked);
                     }
-                } else if (relay) {
-                    reqs.push({ relay, action: isChecked ? 'on' : 'off' });
-                }
-
-                try {
-                    const results = await Promise.all(reqs.map(r =>
-                        fetch('{{ route("switch-action") }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                            },
-                            body: JSON.stringify(r)
-                        }).then(res => res.json())
-                    ));
-                    if (!results.every(r => r.status === 'success')) throw new Error('Some request failed');
-
-                    // Simpan state ke localStorage
-                    localStorage.setItem(`switch-${relay}`, isChecked);
-
-                    // Jika Comfort Mode, update Living Room switch secara visual dan di localStorage
-                    if (relay === 'comfort') {
-                        const livingRoomSwitch = document.querySelector('.lamp-switch[data-relay="4"]');
-                        if (livingRoomSwitch) {
-                            livingRoomSwitch.checked = !isChecked; // off jika Comfort on
-                            localStorage.setItem(`switch-4`, !isChecked);
-                        }
-                    }
-
-                } catch (err) {
-                    console.error(err);
-                    e.target.checked = !isChecked; // rollback switch
-                }
+                });
             });
         });
     </script>
