@@ -3,50 +3,79 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Relay;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use PhpMqtt\Client\MqttClient;
+use PhpMqtt\Client\ConnectionSettings;
 
 class RelayController extends Controller
 {
     public function index(Request $request)
     {
+        $token = $request->bearerToken();
+        $validToken = env('API_TOKEN', 'secret-token');
+
+        if (!$token || $token !== $validToken) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        // Validasi request
         $validated = $request->validate([
-            'relay' => 'required|integer',
+            'relay' => 'required|integer|min:1',
             'action' => 'required|string|in:on,off',
         ]);
 
         $relay = $validated['relay'];
         $action = $validated['action'];
 
-        $baseUrl = config('services.raspi.url'); // best practice
-        $token = $request->bearerToken() ?? config('services.raspi.token');
+        // MQTT config dari env
+        $server   = env('MQTT_HOST', '192.168.88.13');
+        $port     = env('MQTT_PORT', 1883);
+        $clientId = 'laravel-mqtt-client';
 
-        $url = "{$baseUrl}/relay/{$relay}/{$action}";
+        $mqtt = new MqttClient($server, $port, $clientId);
+
+        $connectionSettings = (new ConnectionSettings)
+            ->setUsername(env('MQTT_USERNAME', 'idan'))
+            ->setPassword(env('MQTT_PASSWORD', ''))
+            ->setKeepAliveInterval(60);
+
+        $topic = "relay/{$relay}";
+        $message = $action === 'on' ? 1 : 0;
 
         try {
-            $response = Http::withToken($token)
-                ->timeout(5)
-                ->retry(2, 200)
-                ->post($url);
+            // Connect ke MQTT broker
+            $mqtt->connect($connectionSettings, true);
 
-            if ($response->successful()) {
-                return response()->json([
-                    'status' => 'success',
-                    'message' => "Relay {$relay} berhasil di-{$action}",
-                    'data' => $response->json()
-                ]);
-            }
+            // Publish pesan
+            $mqtt->publish($topic, $message, 0);
 
-            // kalau gagal (4xx / 5xx)
+            // Disconnect
+            $mqtt->disconnect();
+
+            // Update database
+            Relay::updateOrInsert(
+                ['relay_number' => $relay],
+                ['status' => $action]
+            );
+
             return response()->json([
-                'status' => 'error',
-                'message' => 'Gagal mengubah relay',
-                'detail' => $response->body()
-            ], $response->status());
+                'status' => 'success',
+                'message' => "Relay {$relay} berhasil di-{$action}",
+                'data' => [
+                    'topic' => $topic,
+                    'message' => $message
+                ]
+            ]);
         } catch (\Throwable $e) {
-            Log::error('Relay API error', [
-                'url' => $url,
+            Log::error('MQTT Relay error', [
+                'relay' => $relay,
+                'action' => $action,
                 'error' => $e->getMessage()
             ]);
 
