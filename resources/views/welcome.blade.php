@@ -22,6 +22,11 @@
             <div class="mt-4 md:mt-0 flex gap-3">
                 <div class="bg-green-500/10 text-green-400 px-4 py-2 rounded-xl text-sm">🟢 All system normal</div>
                 <div class="bg-gray-800 px-4 py-2 rounded-xl text-sm">{{ now()->format('H:i') }}</div>
+
+                    <button id="logoutBtn"
+        class="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-2 rounded-xl text-sm transition cursor-pointer">
+        Logout
+    </button>
             </div>
         </div>
 
@@ -267,6 +272,32 @@
             });
         });
     </script>
+
+    <script>
+    $(document).ready(function () {
+
+        $('#logoutBtn').on('click', function () {
+
+            if (!confirm('Yakin mau logout?')) return;
+
+            $.ajax({
+                url: "{{ route('logout') }}",
+                method: "POST",
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function () {
+                    window.location.href = "/login";
+                },
+                error: function () {
+                    alert('Gagal logout');
+                }
+            });
+
+        });
+
+    });
+</script>
 </body>
 
 </html>
