@@ -13,7 +13,7 @@ class CheckTemperature extends Command
 
     public function handle()
     {
-        $threshold = 31;
+        $threshold = 10;
 
         $sensor = SensorData::find(1);
 
