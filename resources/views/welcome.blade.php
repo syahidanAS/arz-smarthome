@@ -13,25 +13,32 @@
 <body class="bg-gray-950 text-white">
     <div class="min-h-screen p-6 max-w-7xl mx-auto space-y-6">
 
-        <!-- HEADER -->
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
-            <div>
-                <h1 class="text-3xl font-semibold">ARZ Smarthome System</h1>
-                <p class="text-gray-400">All control is in your hands</p>
-            </div>
-            <div class="mt-4 md:mt-0 flex gap-3">
-                <div class="bg-green-500/10 text-green-400 px-4 py-2 rounded-xl text-sm">🟢 All system normal</div>
-                <div class="bg-gray-800 px-4 py-2 rounded-xl text-sm">{{ now()->format('H:i') }}</div>
-                                   <button id="automationBtn"
-                    class="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 px-4 py-2 rounded-xl text-sm transition cursor-pointer">
-                    Automation
-                </button>
-                    <button id="logoutBtn"
-                    class="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-2 rounded-xl text-sm transition cursor-pointer">
-                    Logout
-                </button>
-            </div>
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-semibold">ARZ Smarthome System</h1>
+            <p class="text-gray-400 text-sm">All control is in your hands</p>
         </div>
+
+        <div class="flex flex-wrap gap-2 md:gap-3">
+            <div class="bg-green-500/10 text-green-400 px-3 py-2 md:px-4 rounded-xl text-xs md:text-sm">
+                🟢 All system normal
+            </div>
+
+            <div class="bg-gray-800 px-3 py-2 md:px-4 rounded-xl text-xs md:text-sm">
+                {{ now()->format('H:i') }}
+            </div>
+
+            <button id="automationBtn"
+                class="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 px-3 py-2 md:px-4 rounded-xl text-xs md:text-sm transition cursor-pointer">
+                Automation
+            </button>
+
+            <button id="logoutBtn"
+                class="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-2 md:px-4 rounded-xl text-xs md:text-sm transition cursor-pointer">
+                Logout
+            </button>
+        </div>
+    </div>
 
         <!-- GREETING -->
         @php
@@ -690,44 +697,7 @@ function updateDeleteButton() {
 $(document).on('change', '.automation-checkbox', updateDeleteButton);
 
 
-$('#deleteSelectedBtn').on('click', function () {
 
-    let ids = [];
-
-    $('.automation-checkbox:checked').each(function () {
-        ids.push($(this).val());
-    });
-
-    if (!ids.length) return;
-
-    if (!confirm(`Hapus ${ids.length} automation?`)) return;
-
-    $.ajax({
-        url: "{{ route('automation.bulkDelete') }}",
-        method: "POST",
-        contentType: "application/json",
-        data: JSON.stringify({ ids: ids }),
-        headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-        },
-        success: function () {
-
-            // update cache
-            if (automationCache) {
-                automationCache = automationCache.filter(item => !ids.includes(item.id.toString()));
-                renderAutomation(automationCache);
-            } else {
-                loadAutomation(true);
-            }
-
-            updateDeleteButton();
-        },
-        error: function () {
-            alert('Gagal hapus automation');
-        }
-    });
-
-});
 </script>
 </body>
 
