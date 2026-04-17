@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\CctvController;
 use App\Http\Controllers\MqttController;
 use App\Http\Controllers\SensorController;
@@ -35,4 +36,9 @@ Route::group(['middleware' => 'auth'], function () {
         return response()->file($path);
     });
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/automations', [AutomationController::class, 'getData'])->name('automations');
+    Route::post('/automations/toggle', [AutomationController::class, 'toggle'])->name('automations.toggle');
+    Route::post('/automations/update', [AutomationController::class, 'update'])->name('automations.update');
+    Route::post('/automation/store', [AutomationController::class, 'store'])->name('automation.store');
+    Route::post('/automation/bulk-delete', [AutomationController::class, 'bulkDelete'])->name('automation.bulkDelete');
 });

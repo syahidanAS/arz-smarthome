@@ -22,11 +22,14 @@
             <div class="mt-4 md:mt-0 flex gap-3">
                 <div class="bg-green-500/10 text-green-400 px-4 py-2 rounded-xl text-sm">🟢 All system normal</div>
                 <div class="bg-gray-800 px-4 py-2 rounded-xl text-sm">{{ now()->format('H:i') }}</div>
-
+                                   <button id="automationBtn"
+                    class="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 px-4 py-2 rounded-xl text-sm transition cursor-pointer">
+                    Automation
+                </button>
                     <button id="logoutBtn"
-        class="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-2 rounded-xl text-sm transition cursor-pointer">
-        Logout
-    </button>
+                    class="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-2 rounded-xl text-sm transition cursor-pointer">
+                    Logout
+                </button>
             </div>
         </div>
 
@@ -178,6 +181,8 @@
         <video id="modalPlayer" class="w-full h-full object-contain" autoplay muted controls></video>
     </div>
 
+    @include('automation')
+
     <script>
         // =================== CCTV ===================
         const video = document.getElementById('player');
@@ -297,6 +302,432 @@
         });
 
     });
+</script>
+
+<script>
+    const automationModal = document.getElementById('automationModal');
+    const automationContent = document.getElementById('automationContent');
+
+    let automationCache = null;
+
+    // =========================
+    // OPEN / CLOSE MODAL
+    // =========================
+    function openAutomation() {
+        automationModal.classList.remove('pointer-events-none');
+
+        // tampilkan loading dulu
+        showLoading();
+
+        // animasi masuk
+        setTimeout(() => {
+            automationModal.classList.remove('opacity-0');
+            automationContent.classList.remove('-translate-y-5', 'opacity-0');
+        }, 50);
+
+        loadAutomation();
+    }
+
+    function closeAutomation() {
+        automationModal.classList.add('opacity-0');
+        automationContent.classList.add('-translate-y-5', 'opacity-0');
+
+        setTimeout(() => {
+            automationModal.classList.add('pointer-events-none');
+        }, 300);
+    }
+
+    document.getElementById('automationBtn').addEventListener('click', openAutomation);
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeAutomation();
+    });
+
+    // =========================
+    // HELPERS
+    // =========================
+    function escapeHtml(text) {
+        return $('<div>').text(text).html();
+    }
+
+    function showLoading() {
+        $('#automationList').html(`
+            <div class="col-span-2 text-center text-gray-400 animate-pulse">
+                Loading automation...
+            </div>
+        `);
+    }
+
+    function showEmpty() {
+        $('#automationList').html(`
+            <div class="col-span-2 text-center text-gray-500">
+                No automation found
+            </div>
+        `);
+    }
+
+    function showError() {
+        $('#automationList').html(`
+            <div class="col-span-2 text-center text-red-400">
+                Failed load automation
+            </div>
+        `);
+    }
+
+    // =========================
+    // LOAD DATA
+    // =========================
+    function loadAutomation(force = false) {
+
+        // pakai cache kalau ada
+        if (automationCache && !force) {
+            renderAutomation(automationCache);
+            return;
+        }
+
+        $.ajax({
+            url: "{{ route('automations') }}",
+            method: 'GET',
+            success: function(res) {
+
+                if (res.status !== 'success') {
+                    showError();
+                    return;
+                }
+
+                if (!res.data || res.data.length === 0) {
+                    showEmpty();
+                    return;
+                }
+
+                automationCache = res.data;
+
+                renderAutomation(res.data);
+            },
+            error: function() {
+                showError();
+            }
+        });
+    }
+
+function renderAutomation(data) {
+
+    let html = '';
+
+    data.forEach(item => {
+
+        let statusColor = item.enabled ? 'green' : 'gray';
+        let statusText = item.enabled ? 'Active' : 'Disabled';
+
+        html += `
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5
+                        hover:scale-[1.02] transition-all duration-300">
+
+                <div class="flex justify-between items-start">
+
+                    <div class="flex items-start gap-3">
+                        <input type="checkbox"
+                            class="automation-checkbox mt-1"
+                            value="${item.id}">
+
+                        <div>
+                            <h3 class="text-lg font-semibold">${escapeHtml(item.name)}</h3>
+                            <p class="text-gray-400 text-sm">${escapeHtml(item.description ?? '-')}</p>
+                        </div>
+                    </div>
+
+                    <span class="text-${statusColor}-400 text-xs">
+                        ● ${statusText}
+                    </span>
+                </div>
+
+                <div class="mt-4 space-y-1 text-sm text-gray-400">
+                    <p>⏰ ${item.time}</p>
+                    <p>📡 ${escapeHtml(item.topic)}</p>
+                    <p>💬 ${escapeHtml(item.message)}</p>
+                </div>
+
+                <div class="mt-4 flex justify-between items-center">
+
+                    <!-- Toggle -->
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox"
+                            class="sr-only peer automation-toggle"
+                            data-id="${item.id}"
+                            ${item.enabled ? 'checked' : ''}>
+
+                        <div class="w-11 h-6 bg-gray-700 rounded-full
+                                    peer-checked:bg-green-500 transition"></div>
+
+                        <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full
+                                    transition peer-checked:translate-x-5"></div>
+                    </label>
+
+                    <div class="flex items-center gap-3">
+
+                        <!-- Edit Button -->
+                        <button
+                            class="text-xs text-blue-400 hover:text-blue-300 edit-automation"
+                            data-id="${item.id}"
+                            data-time="${item.time}"
+                            data-topic="${item.topic}"
+                            data-message="${item.message}">
+                            ✏️ Edit
+                        </button>
+
+                        <div class="text-xs bg-gray-800 px-3 py-1 rounded-lg">
+                            ${item.time}
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    $('#automationList').html(html);
+}
+
+    // =========================
+    // TOGGLE ENABLE/DISABLE
+    // =========================
+    $(document).on('change', '.automation-toggle', function () {
+
+        let id = $(this).data('id');
+        let enabled = $(this).is(':checked') ? 1 : 0;
+        let el = $(this);
+
+        $.ajax({
+            url: "{{ route('automations.toggle') }}", // sesuaikan
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                id: id,
+                enabled: enabled
+            }),
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function() {
+                // update cache biar konsisten
+                if (automationCache) {
+                    automationCache = automationCache.map(item => {
+                        if (item.id == id) item.enabled = enabled;
+                        return item;
+                    });
+                }
+            },
+            error: function () {
+                // rollback kalau gagal
+                el.prop('checked', !enabled);
+                alert('Gagal update automation');
+            }
+        });
+
+    });
+
+
+    const editModal = document.getElementById('editAutomationModal');
+const editContent = document.getElementById('editAutomationContent');
+
+// =========================
+// OPEN EDIT MODAL
+// =========================
+$(document).on('click', '.edit-automation', function () {
+
+    $('#edit-id').val($(this).data('id'));
+    $('#edit-time').val($(this).data('time'));
+    $('#edit-topic').val($(this).data('topic'));
+    $('#edit-message').val($(this).data('message'));
+
+    editModal.classList.remove('pointer-events-none');
+
+    setTimeout(() => {
+        editModal.classList.remove('opacity-0');
+        editContent.classList.remove('scale-95', 'opacity-0');
+    }, 10);
+});
+
+// =========================
+// CLOSE EDIT MODAL
+// =========================
+function closeEditModal() {
+    editModal.classList.add('opacity-0');
+    editContent.classList.add('scale-95', 'opacity-0');
+
+    setTimeout(() => {
+        editModal.classList.add('pointer-events-none');
+    }, 300);
+}
+
+// =========================
+// SAVE EDIT
+// =========================
+$('#saveEditBtn').on('click', function () {
+
+    let id = $('#edit-id').val();
+
+    let data = {
+        id: id,
+        time: $('#edit-time').val(),
+        topic: $('#edit-topic').val(),
+        message: $('#edit-message').val()
+    };
+
+    $.ajax({
+        url: "{{ route('automations.update') }}",
+        method: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(data),
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function () {
+
+            closeEditModal();
+
+            // refresh ulang
+            automationCache = null;
+            loadAutomation(true);
+        },
+        error: function () {
+            alert('Gagal update automation');
+        }
+    });
+
+});
+
+
+const addModal = document.getElementById('addAutomationModal');
+const addContent = document.getElementById('addAutomationContent');
+
+// =========================
+// OPEN ADD MODAL
+// =========================
+$('#addAutomationBtn').on('click', function () {
+
+    // reset form
+    $('#add-name').val('');
+    $('#add-time').val('');
+    $('#add-topic').val('');
+    $('#add-message').val('');
+    $('#add-description').val('');
+
+    addModal.classList.remove('pointer-events-none');
+
+    setTimeout(() => {
+        addModal.classList.remove('opacity-0');
+        addContent.classList.remove('scale-95', 'opacity-0');
+    }, 10);
+});
+
+// =========================
+// CLOSE ADD MODAL
+// =========================
+function closeAddModal() {
+    addModal.classList.add('opacity-0');
+    addContent.classList.add('scale-95', 'opacity-0');
+
+    setTimeout(() => {
+        addModal.classList.add('pointer-events-none');
+    }, 300);
+}
+
+// =========================
+// SAVE NEW AUTOMATION
+// =========================
+$('#saveAddBtn').on('click', function () {
+
+    let data = {
+        name: $('#add-name').val(),
+        time: $('#add-time').val(),
+        topic: $('#add-topic').val(),
+        message: $('#add-message').val(),
+        description: $('#add-description').val()
+    };
+
+    // validasi simple
+    if (!data.name || !data.time || !data.topic) {
+        alert('Name, Time, Topic wajib diisi');
+        return;
+    }
+
+    $.ajax({
+        url: "{{ route('automation.store') }}",
+        method: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(data),
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function () {
+
+            closeAddModal();
+
+            // refresh list
+            automationCache = null;
+            loadAutomation(true);
+        },
+        error: function () {
+            alert('Gagal tambah automation');
+        }
+    });
+
+});
+
+function updateDeleteButton() {
+    let checked = $('.automation-checkbox:checked').length;
+
+    if (checked > 0) {
+        $('#deleteSelectedBtn').removeClass('hidden')
+            .text(`🗑 Delete (${checked})`);
+    } else {
+        $('#deleteSelectedBtn').addClass('hidden');
+    }
+}
+
+// trigger saat checkbox berubah
+$(document).on('change', '.automation-checkbox', updateDeleteButton);
+
+
+$('#deleteSelectedBtn').on('click', function () {
+
+    let ids = [];
+
+    $('.automation-checkbox:checked').each(function () {
+        ids.push($(this).val());
+    });
+
+    if (!ids.length) return;
+
+    if (!confirm(`Hapus ${ids.length} automation?`)) return;
+
+    $.ajax({
+        url: "{{ route('automation.bulkDelete') }}",
+        method: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({ ids: ids }),
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function () {
+
+            // update cache
+            if (automationCache) {
+                automationCache = automationCache.filter(item => !ids.includes(item.id.toString()));
+                renderAutomation(automationCache);
+            } else {
+                loadAutomation(true);
+            }
+
+            updateDeleteButton();
+        },
+        error: function () {
+            alert('Gagal hapus automation');
+        }
+    });
+
+});
 </script>
 </body>
 
