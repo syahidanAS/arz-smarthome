@@ -8,5 +8,5 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-
-Schedule::command('sensor:check-temperature')->everyMinute();
+Schedule::command('automation:run')->everyMinute();
+Schedule::command('sensor:check-temperature')->everyFiveMinutes();
